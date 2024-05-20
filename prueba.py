@@ -3,9 +3,10 @@ def resta(x):
     i = 0
     if x > 0:
         for i in range(x):
-            div = i/2
-            resultado = multiplicacion(div, x)
-            print("resultado: ", resultado)
+            sub = i-10
+            resultado = multiplicacion(sub, x)
+            ##print("resultado: ", resultado)
+        print("resultado: ", resultado)
     else:
         print("resultado: ", resultado)
 
