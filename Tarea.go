@@ -14,52 +14,57 @@ import (
 
 func main() {
 
-	//se declara el modulo
+	//module declarated
 	moduleHM := ir.NewModule()
 	moduleHM.TargetTriple = "x86_64-pc-windows-msvc"
 	moduleHM.DataLayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 
-	formatStr := moduleHM.NewGlobalDef("str", constant.NewCharArrayFromString("Resultado: %d\n\x00"))
-	formatStrMult := moduleHM.NewGlobalDef("strMult", constant.NewCharArrayFromString("Resultado multiplicacion: %d\n\x00"))
-	//aquiStr := moduleHM.NewGlobalDef("aquiStr", constant.NewCharArrayFromString("Aqui\n\x00"))
-
-	//puts := moduleHM.NewFunc("puts", types.I32, ir.NewParam("", types.I8Ptr))
+	//global variables declarated
+	formatStr := moduleHM.NewGlobalDef("str", constant.NewCharArrayFromString("Final result: %d\n\x00"))
+	formatStrMult := moduleHM.NewGlobalDef("strMult", constant.NewCharArrayFromString("Multiplication result (Substraction result * sub func parameter value): %d\n\x00"))
+	formatStrSub := moduleHM.NewGlobalDef("strSub", constant.NewCharArrayFromString("Substraction result (i-10): %d\n\x00"))
+	formatStrI := moduleHM.NewGlobalDef("strI", constant.NewCharArrayFromString("i value: %d\n\x00"))
 	printfInt := moduleHM.NewFunc("printf", types.I32, ir.NewParam("", types.I8Ptr), ir.NewParam("", types.I32))
 
-	//funcion para multiplicar
+	//multiplication function
 	funcMult := moduleHM.NewFunc("mult", types.I32,
 		ir.NewParam("x", types.I32),
 		ir.NewParam("y", types.I32),
 	)
 
-	//se declaran los bloques de la funcion
+	//multiplication func blocks declarated
 	multEntryBlock := funcMult.NewBlock("multEntry")
 	multEndBlock := funcMult.NewBlock("multEnd")
 
-	//bloque de entrada
+	//multiplication entry block
 	multTemp := multEntryBlock.NewMul(funcMult.Params[0], funcMult.Params[1])
 	multResult := multEntryBlock.NewAlloca(types.I32)
 	multEntryBlock.NewStore(multTemp, multResult)
 	multFinal := multEntryBlock.NewLoad(types.I32, multResult)
 
+	//multiplication result printed
 	multEntryBlock.NewCall(printfInt, formatStrMult, multFinal)
 
+	//multiplication final block
 	multEntryBlock.NewBr(multEndBlock)
 	multEndBlock.NewRet(multFinal)
 
-	//se declara la funcion 2 para el modulo con sus respectivos bloques, variables y operaciones
+	//substraction func
 	funcSub := moduleHM.NewFunc("sub", types.I32,
 		ir.NewParam("x", types.I32))
 
-	//se declaran los bloques de la funcion
+	//substraction func blocks declarated
 	subEntryBlock := funcSub.NewBlock("subEntry")
+
 	subIFBodyBlock := funcSub.NewBlock("subIFBody")
 	subElseBlock := funcSub.NewBlock("subElseBody")
+
 	subForBodyBlock := funcSub.NewBlock("subForBody")
 	subForCondBlock := funcSub.NewBlock("subForCond")
+
 	subEndBlock := funcSub.NewBlock("subEnd")
 
-	//bloque de entrada
+	//substraction entry block
 	resultSub := subEntryBlock.NewAlloca(types.I32)
 	subEntryBlock.NewStore(funcSub.Params[0], resultSub)
 
@@ -70,42 +75,55 @@ func main() {
 	subEntryBlock.NewStore(funcSub.Params[0], subX)
 	subIFX := subEntryBlock.NewLoad(types.I32, subX)
 
+	//if called
 	subEntryBlock.NewBr(subIFBodyBlock)
 
-	//bloque de if
+	//if block
 	condIFSub := subIFBodyBlock.NewICmp(enum.IPredSGT, subIFX, constant.NewInt(types.I32, 0))
 	subIFBodyBlock.NewCondBr(condIFSub, subForCondBlock, subElseBlock)
 
-	//bloque de else'
+	//else block
 	subElseBlock.NewBr(subEndBlock)
 
-	//bloque del cuerpo del for
+	//for condition block
 	subParam1 := subForCondBlock.NewLoad(types.I32, iSub)
 	subParam2 := subForCondBlock.NewLoad(types.I32, subX)
 	condForSub := subForCondBlock.NewICmp(enum.IPredSLT, subParam1, subParam2)
 	subForCondBlock.NewCondBr(condForSub, subForBodyBlock, subEndBlock)
 
-	//cuerpo del bucle
+	//CONDTITION BODY
 	tempISub := subForBodyBlock.NewLoad(types.I32, iSub)
+	subForBodyBlock.NewCall(printfInt, formatStrI, tempISub)
+
+	//substraction
 	sub := subForBodyBlock.NewSub(tempISub, constant.NewInt(types.I32, 10))
+	subForBodyBlock.NewCall(printfInt, formatStrSub, sub)
+
+	//multiplication func called
 	resultSubTemp := subForBodyBlock.NewCall(funcMult, sub, funcSub.Params[0])
 	subForBodyBlock.NewStore(resultSubTemp, resultSub)
 
-	//se incrementa i
+	//increment i
 	subIncrI := subForBodyBlock.NewAdd(tempISub, constant.NewInt(types.I32, 1))
 	subForBodyBlock.NewStore(subIncrI, iSub)
+
+	//for condition block called
 	subForBodyBlock.NewBr(subForCondBlock)
 
-	//bloque final
+	//substraction final block
 	subEndBlock.NewBr(subEndBlock)
 	returnResult := subEndBlock.NewLoad(types.I32, resultSub)
-	subEndBlock.NewCall(printfInt, formatStr, returnResult)
 	subEndBlock.NewRet(returnResult)
 
-	//main
+	//MAIN
 	funcMain := moduleHM.NewFunc("main", types.I32)
 	mainBlock := funcMain.NewBlock("")
+
+	//substraction func called
 	intValue := mainBlock.NewCall(funcSub, constant.NewInt(types.I32, 5))
+
+	//substraction result printed
+	mainBlock.NewCall(printfInt, formatStr, intValue)
 	mainBlock.NewRet(intValue)
 
 	fmt.Println(moduleHM.String())
